@@ -1,14 +1,25 @@
 import rospy
 from geometry_msgs.msg import Twist
 
-
-def cmd_vel_callback(msg):
-    rospy.logdebug("feur")
+def moveForward(speed : float, publisher : rospy.Publisher):
+    print("send data")
+    rospy.loginfo("Moving TurtleBot...")
+    twistMessage = Twist()
+    twistMessage.linear.x = speed   
+    publisher.publish(twistMessage) 
+    pass
 
 def main():
-    rospy.init_node('cmd_vel_subscriber', anonymous=True)
-    rospy.Subscriber('cmd_vel', Twist, cmd_vel_callback)
-    rospy.spin()
+    print("node started")
+    rospy.init_node('data_to_cmd_vel')
+    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+
+    speed = 1
+    rate = rospy.Rate(10) # 10 Hz
+
+    while not rospy.is_shutdown():
+        moveForward(speed, pub)
+        rate.sleep()
 
 if __name__ == '__main__':
     try:
