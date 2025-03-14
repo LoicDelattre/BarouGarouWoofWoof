@@ -74,7 +74,7 @@ class TurtlebotVisionController:
 
             # Define movement logic based on object position
             if area > 50:  # Ignore small objects (filter out noise)
-                rospy.loginfo("Red object detected! Moving toward it.")
+                rospy.loginfo("Red object detected! Skibidiing toward it.")
 
                 if abs(center_x - img_center_x) < 50:
                     twist_msg.linear.x = self.forward_speed  # Move forward
