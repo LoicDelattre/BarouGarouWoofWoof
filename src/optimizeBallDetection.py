@@ -19,35 +19,32 @@ class TurtlebotVisionController:
         self.publisher = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
 
         # Define movement speed
-        self.forward_speed = 0.2
+        self.forward_speed = 0.05
         self.turn_speed = 0.5
-        self.number_of_image_ignored = 1
-        self.image_counter = 0
+        self.going_to_ball = False
+        self.buffer_movement_cmd = 0
 
     def image_callback(self, msg):
         """
         Callback function to process the received image and detect red objects.
         """
-        print("image sent")
-        if (self.image_counter == self.number_of_image_ignored):
-            self.image_counter = 0
-            try:
-                # Convert ROS Image message to OpenCV format
-                cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        try:
+                if not self.going_to_ball :
+                        # Convert ROS Image message to OpenCV format
+                        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
-                # Process the image to detect red color
-                movement_cmd = self.process_image(cv_image)
-                print(movement_cmd)
+                        # Process the image to detect red color
+                        movement_cmd = self.process_image(cv_image)
+                        self.buffer_movement_cmd = movement_cmd
 
-                print("sending data to robot")
-                # Publish movement command
-                self.publisher.publish(movement_cmd)
+                        # Publish movement command
+                        self.publisher.publish(movement_cmd)
+                else:
+                        self.publisher.publish(self.buffer_movement_cmd)
 
-            except CvBridgeError as e:
-                rospy.logerr("CvBridge Error: {}".format(e))
-        elif(self.image_counter < self.number_of_image_ignored):
-            self.image_counter += 1
-    
+        except CvBridgeError as e:
+            rospy.logerr("CvBridge Error: {}".format(e))
+
     def process_image(self, cv_image):
         """
         Detect red color in the image and determine movement.
@@ -83,11 +80,15 @@ class TurtlebotVisionController:
 
             # Define movement logic based on object position
             if area > 50:  # Ignore small objects (filter out noise)
-                rospy.loginfo("Red object detected! Skibidiing toward it.")
-
                 if abs(center_x - img_center_x) < 50:
                     twist_msg.linear.x = self.forward_speed  # Move forward
                     twist_msg.angular.z = 0.0
+                    
+                    rospy.loginfo(f"Item area = {area}")
+                    rospy.loginfo("Red object detected! Skibidiing toward it.")
+
+                    cv2.imwrite("saved_image.jpg", cv_image)
+                    self.going_to_ball = True
                 elif center_x < img_center_x:
                     twist_msg.linear.x = 0.0
                     twist_msg.angular.z = self.turn_speed  # Turn left
@@ -95,12 +96,10 @@ class TurtlebotVisionController:
                     twist_msg.linear.x = 0.0
                     twist_msg.angular.z = -self.turn_speed  # Turn right
             else:
-                rospy.loginfo("Red object too small, ignoring.")
                 twist_msg.linear.x = 0.0
                 twist_msg.angular.z = self.turn_speed  # Rotate to search
 
         else:
-            rospy.loginfo("No red object detected. Searching...")
             twist_msg.linear.x = 0.0
             twist_msg.angular.z = self.turn_speed  # Rotate to search
 
