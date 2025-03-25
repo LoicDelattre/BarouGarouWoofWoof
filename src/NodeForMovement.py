@@ -26,13 +26,16 @@ class TurtlebotVisionController:
         """
         Callback function to process the received image and detect red objects.
         """
+        print("image sent")
         try:
             # Convert ROS Image message to OpenCV format
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
             # Process the image to detect red color
             movement_cmd = self.process_image(cv_image)
+            print(movement_cmd)
 
+            print("sending data to robot")
             # Publish movement command
             self.publisher.publish(movement_cmd)
 
@@ -74,6 +77,7 @@ class TurtlebotVisionController:
 
             # Define movement logic based on object position
             if area > 50:  # Ignore small objects (filter out noise)
+
                 rospy.loginfo("Red object detected! Skibidiing toward it.")
 
                 if abs(center_x - img_center_x) < 50:
